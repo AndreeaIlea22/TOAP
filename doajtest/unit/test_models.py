@@ -198,6 +198,31 @@ class TestModels(DoajTestCase):
             raise Exception(e.message)
         j.save()
 
+    def test_02a_journal_classmethods(self):
+        j1 = models.Journal()
+        j1.set_in_doaj(True)
+        bj1 = j1.bibjson()
+        bj1.add_identifier(bj1.P_ISSN,"1111-1111")
+        bj1.add_identifier(bj1.E_ISSN,"2222-2222")
+        j1.save(blocking=True)
+
+        j2 = models.Journal()
+        j2.set_in_doaj(True)
+        bj2 = j2.bibjson()
+        bj2.add_identifier(bj2.P_ISSN, "3333-3333")
+        bj2.add_identifier(bj2.E_ISSN, "4444-4444")
+        j2.save(blocking=True)
+
+        res = models.Journal.find_by_issn("1111-1111", in_doaj=True)
+        eres = models.Journal.find_by_eissn("2222-2222", in_doaj=True)
+        pres = models.Journal.find_by_pissn("3333-3333", in_doaj=True)
+        assert len(res) == 1
+        assert res[0].id == j1.id
+        assert len(eres) == 1
+        assert eres[0].id == j1.id
+        assert len(pres) == 1
+        assert pres[0].id == j2.id
+
     def test_03_article_model_rw(self):
         """Read and write properties into the article model"""
         a = models.Article()

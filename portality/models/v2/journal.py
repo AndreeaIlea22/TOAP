@@ -59,15 +59,23 @@ class ContinuationException(Exception):
 class JournalLikeObject(SeamlessMixin, DomainObject):
 
     @classmethod
-    def find_by_issn(cls, issns, in_doaj=None, max=10):
+    def find_by_issn(cls, issns, in_doaj=None, max=10, type=None):
         if not isinstance(issns, list):
             issns = [issns]
         q = JournalQuery()
-        q.find_by_issn(issns, in_doaj=in_doaj, max=max)
+        q.find_by_issn(issns, in_doaj=in_doaj, max=max, type=type)
         result = cls.query(q=q.query)
         # create an array of objects, using cls rather than Journal, which means subclasses can use it too
         records = [cls(**r.get("_source")) for r in result.get("hits", {}).get("hits", [])]
         return records
+
+    @classmethod
+    def find_by_pissn(cls, issn, in_doaj=None):
+        return cls.find_by_issn([issn], in_doaj=in_doaj, type="pissn")
+
+    @classmethod
+    def find_by_eissn(cls, issn, in_doaj=None):
+        return cls.find_by_issn([issn], in_doaj=in_doaj, type="eissn")
 
     @classmethod
     def issns_by_owner(cls, owner, in_doaj=None):
@@ -906,7 +914,7 @@ class JournalQuery(object):
             "bool": {
                 "must": [
                     {
-                        "terms": {"index.issn.exact": "<issn>"}
+                        "terms": {}
                     }
                 ]
             }
@@ -931,9 +939,16 @@ class JournalQuery(object):
         self.minified = minified
         self.sort_by_title = sort_by_title
 
-    def find_by_issn(self, issns, in_doaj=None, max=10):
+    def find_by_issn(self, issns, in_doaj=None, max=10, type=None):
+        """
+        type: "pissn" or "eissn"
+        """
+        if type is not None:
+            field = "bibjson." + type + ".exact"
+        else:
+            field = "index.issn.exact"
         self.query = deepcopy(self.issn_query)
-        self.query["query"]["bool"]["must"][0]["terms"]["index.issn.exact"] = issns
+        self.query["query"]["bool"]["must"][0]["terms"] = {field : issns}
         if in_doaj is not None:
             self.query["query"]["bool"]["must"].append({"term": {"admin.in_doaj": in_doaj}})
         self.query["size"] = max
