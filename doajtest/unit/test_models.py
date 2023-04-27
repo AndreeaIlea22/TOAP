@@ -213,15 +213,30 @@ class TestModels(DoajTestCase):
         bj2.add_identifier(bj2.E_ISSN, "4444-4444")
         j2.save(blocking=True)
 
-        res = models.Journal.find_by_issn("1111-1111", in_doaj=True)
-        eres = models.Journal.find_by_eissn("2222-2222", in_doaj=True)
-        pres = models.Journal.find_by_pissn("3333-3333", in_doaj=True)
+        res = models.Journal.find_by_issn(["1111-1111","2222-2222"], in_doaj=True)
         assert len(res) == 1
         assert res[0].id == j1.id
+        res = models.Journal.find_by_issn("3333-3333", in_doaj=True)
+        assert len(res) == 1
+        assert res[0].id == j2.id
+        res = models.Journal.find_by_issn("4444-4444", in_doaj=True)
+        assert len(res) == 1
+        assert res[0].id == j2.id
+
+        res = models.Journal.find_by_issn(["2222-2222","3333-3333"], in_doaj=True)
+        assert len(res) == 2
+
+        eres = models.Journal.find_by_eissn("2222-2222", in_doaj=True)
+        pres = models.Journal.find_by_pissn("3333-3333", in_doaj=True)
         assert len(eres) == 1
         assert eres[0].id == j1.id
         assert len(pres) == 1
         assert pres[0].id == j2.id
+
+        eres = models.Journal.find_by_eissn("3333-3333", in_doaj=True)
+        pres = models.Journal.find_by_pissn("2222-2222", in_doaj=True)
+        assert len(eres) == 0
+        assert len(pres) == 0
 
     def test_03_article_model_rw(self):
         """Read and write properties into the article model"""
