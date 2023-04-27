@@ -207,7 +207,7 @@ class TestModels(DoajTestCase):
         j1.save(blocking=True)
 
         j2 = models.Journal()
-        j2.set_in_doaj(True)
+        j2.set_in_doaj(False)
         bj2 = j2.bibjson()
         bj2.add_identifier(bj2.P_ISSN, "3333-3333")
         bj2.add_identifier(bj2.E_ISSN, "4444-4444")
@@ -216,18 +216,23 @@ class TestModels(DoajTestCase):
         res = models.Journal.find_by_issn(["1111-1111","2222-2222"], in_doaj=True)
         assert len(res) == 1
         assert res[0].id == j1.id
-        res = models.Journal.find_by_issn("3333-3333", in_doaj=True)
+        res = models.Journal.find_by_issn("3333-3333", in_doaj=False)
         assert len(res) == 1
         assert res[0].id == j2.id
         res = models.Journal.find_by_issn("4444-4444", in_doaj=True)
-        assert len(res) == 1
-        assert res[0].id == j2.id
+        assert len(res) == 0
 
         res = models.Journal.find_by_issn(["2222-2222","3333-3333"], in_doaj=True)
+        assert len(res) == 1
+
+        res = models.Journal.find_by_issn(["2222-2222", "3333-3333"], in_doaj=False)
+        assert len(res) == 1
+
+        res = models.Journal.find_by_issn(["2222-2222", "3333-3333"])
         assert len(res) == 2
 
         eres = models.Journal.find_by_eissn("2222-2222", in_doaj=True)
-        pres = models.Journal.find_by_pissn("3333-3333", in_doaj=True)
+        pres = models.Journal.find_by_pissn("3333-3333")
         assert len(eres) == 1
         assert eres[0].id == j1.id
         assert len(pres) == 1
