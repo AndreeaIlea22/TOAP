@@ -159,9 +159,6 @@ class ArticleService(object):
         if len(pissn) > 1 or len(eissn) > 1:
             raise exceptions.ArticleNotAcceptable(message=Messages.EXCEPTION_TOO_MANY_ISSNS)
 
-        pissn = article_bibjson.get_one_identifier("pissn")
-        eissn = article_bibjson.get_one_identifier("eissn")
-
         # no pissn or eissn
         if not pissn and not eissn:
             raise exceptions.ArticleNotAcceptable(message=Messages.EXCEPTION_NO_ISSNS)
@@ -169,6 +166,18 @@ class ArticleService(object):
         # pissn and eissn identical
         if pissn == eissn:
             raise exceptions.ArticleNotAcceptable(message=Messages.EXCEPTION_IDENTICAL_PISSN_AND_EISSN)
+
+        ArticleService._validate_issns_against_journal(pissn[0],eissn[0])
+
+    @staticmethod
+    def _validate_issns_against_journal(pissn,eissn):
+        journals = models.Journal.find_by_issn(pissn + eissn)
+        if len(journals) > 1:
+            raise exceptions.ArticleNotAcceptable(message=Messages.ARTICLE_MATCHES_MULTIPLE_JOURNALS)
+        if len(journals) == 1:
+            j = journals[0]
+            if j["bibjson"]["pissn"] != pissn or j["bibjson"]["eissn"] != eissn:
+                raise exceptions.ArticleNotAcceptable(message=Messages.ISSNS_TYPE_MISMATCH)
 
     def create_article(self, article, account, duplicate_check=True, merge_duplicate=True,
                        limit_to_account=True, add_journal_info=False, dry_run=False, update_article_id=None):

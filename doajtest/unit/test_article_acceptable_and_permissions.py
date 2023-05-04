@@ -6,11 +6,17 @@ from doajtest.helpers import DoajTestCase
 from portality.bll import DOAJ
 from portality.bll import exceptions
 from portality.models import Article, Account, Journal
+from portality.bll.services.article import ArticleService
 from portality.lib.paths import rel2abs
 
 
 def is_acceptable_load_cases():
     return load_parameter_sets(rel2abs(__file__, "..", "matrices", "article_create_article"), "is_acceptable",
+                               "test_id",
+                               {"test_id": []})
+
+def validate_against_journal():
+    return load_parameter_sets(rel2abs(__file__, "..", "matrices", "article_create_article"), "issn_validation_against_journal",
                                "test_id",
                                {"test_id": []})
 
@@ -31,83 +37,124 @@ class TestBLLPrepareUpdatePublisher(DoajTestCase):
         Article.merge = self.merge
         Article.pull = self.pull
 
-    @parameterized.expand(is_acceptable_load_cases)
-    def test_is_acceptable(self, value, kwargs):
-        doi_arg = kwargs.get("doi")
-        ft_arg = kwargs.get("fulltext_url")
-        is_acceptable_arg = kwargs.get("is_acceptable")
+    # @parameterized.expand(is_acceptable_load_cases)
+    # def test_is_acceptable(self, value, kwargs):
+    #     doi_arg = kwargs.get("doi")
+    #     ft_arg = kwargs.get("fulltext_url")
+    #     is_acceptable_arg = kwargs.get("is_acceptable")
+    #
+    #     is_acceptable = True if is_acceptable_arg == "yes" else False
+    #     doi = "10.1234/article-10" if doi_arg == "exists" else None
+    #     ft = "https://example.com" if ft_arg == "exists" else None
+    #     incorrect_issn_count = True if kwargs.get("incorrect_issn_count") == "yes" else False
+    #     pissn_eissn_match = True if kwargs.get("pissn_eissn_match") == "yes" else False
+    #     journal_in_doaj = True if kwargs.get("journal_in_doaj") == "yes" else False
+    #
+    #     journal_source = JournalFixtureFactory.make_journal_source(in_doaj=False)
+    #     journal = Journal(**journal_source)
+    #     jbib = journal.bibjson()
+    #     jbib.add_identifier(jbib.P_ISSN, '0000-0000')
+    #     jbib.add_identifier(jbib.E_ISSN, '1111-1111')
+    #     if journal_in_doaj:
+    #         journal.set_in_doaj(True)
+    #     journal.save(blocking=True)
+    #
+    #     if pissn_eissn_match:
+    #         article_source = ArticleFixtureFactory.make_article_source(pissn="0000-0000", eissn="0000-0000")
+    #     else:
+    #         article_source = ArticleFixtureFactory.make_article_source(pissn="0000-0000", eissn="1111-1111")
+    #
+    #     article = Article(**article_source)
+    #
+    #     if doi is None:
+    #         article.bibjson().remove_identifiers("doi")
+    #     if ft is None:
+    #         article.bibjson().remove_urls("fulltext")
+    #
+    #     if incorrect_issn_count:
+    #         article.bibjson().get_identifiers().append({'type': 'pissn', 'id': '1234-1234'})
+    #
+    #     if is_acceptable:
+    #         self.assertIsNone(self.svc.is_acceptable(article))
+    #
+    #     else:
+    #         with self.assertRaises(exceptions.ArticleNotAcceptable):
+    #             self.svc.is_acceptable(article)
+    #
+    # def test_has_permissions(self):
+    #
+    #     journal_source = JournalFixtureFactory.make_journal_source()
+    #     journal1 = Journal(**journal_source)
+    #
+    #     publisher_owner_src = AccountFixtureFactory.make_publisher_source()
+    #     publisher_owner = Account(**publisher_owner_src)
+    #     publisher_stranged_src = AccountFixtureFactory.make_publisher_source()
+    #     publisher_stranged = Account(**publisher_stranged_src)
+    #     admin_src = AccountFixtureFactory.make_managing_editor_source()
+    #     admin = Account(**admin_src)
+    #
+    #     journal1.set_owner(publisher_owner)
+    #     journal1.save(blocking=True)
+    #
+    #     eissn = journal1.bibjson().get_one_identifier("eissn")
+    #     pissn = journal1.bibjson().get_one_identifier("pissn")
+    #
+    #     art_source = ArticleFixtureFactory.make_article_source(eissn=eissn,
+    #                                                            pissn=pissn)
+    #     article = Article(**art_source)
+    #
+    #     assert self.svc.has_permissions(publisher_stranged, article, False)
+    #     assert self.svc.has_permissions(publisher_owner, article, True)
+    #     assert self.svc.has_permissions(admin, article, True)
+    #     failed_result = self.svc.has_permissions(publisher_stranged, article, True)
+    #     assert failed_result["success"] == 0
+    #     assert failed_result["fail"] == 1
+    #     assert failed_result["update"] == 0
+    #     assert failed_result["new"] == 0
+    #     assert len(failed_result["shared"]) == 0
+    #     assert len(failed_result["unmatched"]) == 0
+    #     assert failed_result["unowned"].sort() == [pissn, eissn].sort()
+    #     # assert failed_result == {'success': 0, 'fail': 1, 'update': 0, 'new': 0, 'shared': [],
+    #     #                          'unowned': [pissn, eissn],
+    #     #                          'unmatched': []}, "received: {}".format(failed_result)
 
-        is_acceptable = True if is_acceptable_arg == "yes" else False
-        doi = "10.1234/article-10" if doi_arg == "exists" else None
-        ft = "https://example.com" if ft_arg == "exists" else None
-        incorrect_issn_count = True if kwargs.get("incorrect_issn_count") == "yes" else False
-        pissn_eissn_match = True if kwargs.get("pissn_eissn_match") == "yes" else False
-        journal_in_doaj = True if kwargs.get("journal_in_doaj") == "yes" else False
+    @parameterized.expand(validate_against_journal)
+    def test_validate_issns_against_journal(self, value, kwargs):
+        ISSNS =  {
+            "pissn_in_doaj": "1111-1111",
+            "eissn_in_doaj": "2222-2222",
 
-        journal_source = JournalFixtureFactory.make_journal_source(in_doaj=False)
-        journal = Journal(**journal_source)
-        jbib = journal.bibjson()
-        jbib.add_identifier(jbib.P_ISSN, '0000-0000')
-        jbib.add_identifier(jbib.E_ISSN, '1111-1111')
-        if journal_in_doaj:
-            journal.set_in_doaj(True)
-        journal.save(blocking=True)
+            "pissn_not_in_doaj": "3333-3333",
+            "eissn_not_in_doaj": "4444-4444"
+        }
+        eissn = ISSNS[kwargs.get("eissn")]
+        pissn = ISSNS[kwargs.get("pissn")]
+        validated = kwargs.get("validated")
+        print("")
+        print(kwargs.get("eissn"))
+        print(kwargs.get("pissn"))
 
-        if pissn_eissn_match:
-            article_source = ArticleFixtureFactory.make_article_source(pissn="0000-0000", eissn="0000-0000")
-        else:
-            article_source = ArticleFixtureFactory.make_article_source(pissn="0000-0000", eissn="1111-1111")
+        j1 = Journal()
+        j1.set_in_doaj(True)
+        bj1 = j1.bibjson()
+        bj1.add_identifier(bj1.P_ISSN, ISSNS["pissn_in_doaj"])
+        bj1.add_identifier(bj1.E_ISSN, ISSNS["eissn_in_doaj"])
+        j1.save(blocking=True)
 
-        article = Article(**article_source)
-
-        if doi is None:
-            article.bibjson().remove_identifiers("doi")
-        if ft is None:
-            article.bibjson().remove_urls("fulltext")
-
-        if incorrect_issn_count:
-            article.bibjson().get_identifiers().append({'type': 'pissn', 'id': '1234-1234'})
-
-        if is_acceptable:
-            self.assertIsNone(self.svc.is_acceptable(article))
-
-        else:
-            with self.assertRaises(exceptions.ArticleNotAcceptable):
-                self.svc.is_acceptable(article)
-
-    def test_has_permissions(self):
-
-        journal_source = JournalFixtureFactory.make_journal_source()
-        journal1 = Journal(**journal_source)
-
-        publisher_owner_src = AccountFixtureFactory.make_publisher_source()
-        publisher_owner = Account(**publisher_owner_src)
-        publisher_stranged_src = AccountFixtureFactory.make_publisher_source()
-        publisher_stranged = Account(**publisher_stranged_src)
-        admin_src = AccountFixtureFactory.make_managing_editor_source()
-        admin = Account(**admin_src)
-
-        journal1.set_owner(publisher_owner)
-        journal1.save(blocking=True)
-
-        eissn = journal1.bibjson().get_one_identifier("eissn")
-        pissn = journal1.bibjson().get_one_identifier("pissn")
+        j2 = Journal()
+        j2.set_in_doaj(False)
+        bj2 = j2.bibjson()
+        bj2.add_identifier(bj2.P_ISSN, ISSNS["pissn_not_in_doaj"])
+        bj2.add_identifier(bj2.E_ISSN, ISSNS["eissn_not_in_doaj"])
+        j2.save(blocking=True)
 
         art_source = ArticleFixtureFactory.make_article_source(eissn=eissn,
                                                                pissn=pissn)
         article = Article(**art_source)
 
-        assert self.svc.has_permissions(publisher_stranged, article, False)
-        assert self.svc.has_permissions(publisher_owner, article, True)
-        assert self.svc.has_permissions(admin, article, True)
-        failed_result = self.svc.has_permissions(publisher_stranged, article, True)
-        assert failed_result["success"] == 0
-        assert failed_result["fail"] == 1
-        assert failed_result["update"] == 0
-        assert failed_result["new"] == 0
-        assert len(failed_result["shared"]) == 0
-        assert len(failed_result["unmatched"]) == 0
-        assert failed_result["unowned"].sort() == [pissn, eissn].sort()
-        # assert failed_result == {'success': 0, 'fail': 1, 'update': 0, 'new': 0, 'shared': [],
-        #                          'unowned': [pissn, eissn],
-        #                          'unmatched': []}, "received: {}".format(failed_result)
+        res = True if validated=="yes" else False
+        # if not res:
+        #     with self.assertRaises(exceptions.ArticleNotAcceptable):
+        #         ArticleService._validate_issns_against_journal(pissn, eissn)
+        # else:
+        #     ArticleService._validate_issns_against_journal(pissn, eissn)

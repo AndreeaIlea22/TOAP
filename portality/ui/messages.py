@@ -57,6 +57,10 @@ class Messages(object):
     EXCEPTION_SCRIPT_TAG_FOUND = "Metadata contains <script> tag. Please remove any <script> tags from your metadata and try again."
     EXCEPTION_ADDING_ARTICLE_TO_WITHDRAWN_JOURNAL = "You are trying to add the articles to a journal that has been withdrawn from DOAJ. We accept articles only for journals currently in DOAJ"
 
+    EXCEPTION_ISSN_MATCHES_MULTIPLE_JOURNALS = "The article's issns you provided matches multiple journals. Please make sure that your metadata is correct."
+    ISSNS_TYPE_MISMATCH = "At least one of the issn's type provided does not match the type of the journal's issn. Please make sure your metadata is correct."
+
+
     EXCEPTION_NO_CONTRIBUTORS_FOUND = "No contributors found."
     EXCEPTION_NO_CONTRIBUTORS_EXPLANATION = "DOAJ requires at least one author for each article."
 
